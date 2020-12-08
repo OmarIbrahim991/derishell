@@ -3,12 +3,12 @@ import collections
 
 from terminaltables import AsciiTable
 
-from derishell.util.deribit_api import RestClient
+from binance.util.binance_api import RestClient
 
-from derishell.util.Util import Util
-from derishell.util.ColorText import ColorText
-from derishell.managers.ConfigManager import ConfigManager
-from derishell.managers.DatabaseManager import DatabaseManager
+from binance.util.Util import Util
+from binance.util.ColorText import ColorText
+from binance.managers.ConfigManager import ConfigManager
+from binance.managers.DatabaseManager import DatabaseManager
 
 class TradeManager:
 
@@ -40,14 +40,14 @@ class TradeManager:
         Util.get_logger().info("Setup initial ladder")
 
         for x in range(ConfigManager.get_config().numOfOrders):
-            DatabaseManager.create_order_entry("", (ConfigManager.get_config().basePrice - ConfigManager.get_config().priceDistance) - (ConfigManager.get_config().priceDistance * x), ConfigManager.get_config().contractSize, "buy")
+            DatabaseManager.create_order_entry("", (ConfigManager.get_config().basePrice - ConfigManager.get_config().priceDistance) - (ConfigManager.get_config().priceDistance * x), ConfigManager.get_config().contractSize, "BUY")
 
 
         TradeManager.update_pending_orders()
 
         # Create the stop loss order
         order = TradeManager.create_sl_sell_order(ConfigManager.get_config().stopLossPrice, ConfigManager.get_config().numOfOrders * ConfigManager.get_config().contractSize)
-        DatabaseManager.create_sl_order_entry(order['order']['orderId'], ConfigManager.get_config().stopLossPrice, ConfigManager.get_config().numOfOrders * ConfigManager.get_config().contractSize)
+        DatabaseManager.create_sl_order_entry(order['orderId'], ConfigManager.get_config().stopLossPrice, ConfigManager.get_config().numOfOrders * ConfigManager.get_config().contractSize)
 
 
     @staticmethod
@@ -58,7 +58,7 @@ class TradeManager:
 
         for order in orders:
             client.cancel(order.orderId)
-            DatabaseManager.update_order_entry(order.orderId, "cancelled")
+            DatabaseManager.update_order_entry(order.orderId, "CANCELED")
             Util.get_logger().info("Cancelled order: " + str(order.orderId))
 
 
@@ -68,10 +68,10 @@ class TradeManager:
         positions = client.positions()
 
         for x in positions:
-            if x['direction'] == 'buy':
-                client.sell(ConfigManager.get_config().tradeInsturment, x['size'], 1, False, "")
+            if x['side'] == 'BUY':
+                client.sell(ConfigManager.get_config().tradeInsturment, x['origQty'], 1, False, "")
             else:
-                client.buy(ConfigManager.get_config().tradeInsturment, x['size'], 99999, False, "")
+                client.buy(ConfigManager.get_config().tradeInsturment, x['origQty'], 99999, False, "")
 
     @staticmethod
     def update_pending_orders():
@@ -82,14 +82,14 @@ class TradeManager:
 
             try:
 
-                if order.direction == 'buy':
+                if order.direction == 'BUY':
                     #if currentPrice > order.price:
                     newOrder = TradeManager.create_new_buy_order(order.price, order.contractSize)
-                    DatabaseManager.update_new_order_entry(order, newOrder['order']['orderId'], "open")
+                    DatabaseManager.update_new_order_entry(order, newOrder['orderId'], "open")
 
                 else:
                     newOrder = TradeManager.create_new_sell_order(order.price, order.contractSize)
-                    DatabaseManager.update_new_order_entry(order, newOrder['order']['orderId'], "open")
+                    DatabaseManager.update_new_order_entry(order, newOrder['orderId'], "open")
 
             except Exception as e:
                 print(e)
@@ -109,9 +109,9 @@ class TradeManager:
                     
                     updatedOrder = client.getorderstate(order.orderId)
 
-                    DatabaseManager.update_order_entry(order.orderId, updatedOrder['state'])
+                    DatabaseManager.update_order_entry(order.orderId, updatedOrder['status'])
 
-                    if updatedOrder['state'] == "filled":
+                    if updatedOrder['status'] == "FILLED":
 
                         if "SLMS" in order.orderId:
                             # Stop loss fired
@@ -122,24 +122,24 @@ class TradeManager:
 
 
                         else:
-                            if updatedOrder['direction'] == "buy":
+                            if updatedOrder['side'] == "BUY":
 
                                 if ConfigManager.get_config().fcbMode:
                                     #Create new one
-                                    DatabaseManager.create_order_entry("", order.price + ConfigManager.get_config().priceDistance, ConfigManager.get_config().contractSize, "sell")
+                                    DatabaseManager.create_order_entry("", order.price + ConfigManager.get_config().priceDistance, ConfigManager.get_config().contractSize, "SELL")
 
                                 else:
                                     sellPriceOffset = ConfigManager.get_config().basePrice - order.price
-                                    DatabaseManager.create_order_entry("", ConfigManager.get_config().basePrice + sellPriceOffset, ConfigManager.get_config().contractSize, "sell")
+                                    DatabaseManager.create_order_entry("", ConfigManager.get_config().basePrice + sellPriceOffset, ConfigManager.get_config().contractSize, "SELL")
 
                             else:
 
                                 if ConfigManager.get_config().fcbMode:
-                                    DatabaseManager.create_order_entry("", order.price - ConfigManager.get_config().priceDistance, ConfigManager.get_config().contractSize, "buy")
+                                    DatabaseManager.create_order_entry("", order.price - ConfigManager.get_config().priceDistance, ConfigManager.get_config().contractSize, "BUY")
                                 else:
                                     # put in buy order
                                     buyPriceOffset = order.price - ConfigManager.get_config().basePrice
-                                    DatabaseManager.create_order_entry("",ConfigManager.get_config().basePrice + buyPriceOffset , ConfigManager.get_config().contractSize, "buy")
+                                    DatabaseManager.create_order_entry("",ConfigManager.get_config().basePrice + buyPriceOffset , ConfigManager.get_config().contractSize, "BUY")
                 except:
                     pass
         else:
@@ -168,7 +168,7 @@ class TradeManager:
         ]
 
         for order in list(sortedDict.values())[::-1]:
-            if order.direction == "sell":
+            if order.direction == "SELL":
                 table_data.append([order.id, order.orderId, order.price, order.contractSize, order.status, ColorText.red(order.direction)])
 
         table = AsciiTable(table_data, "Current Open Sell Orders")
@@ -189,8 +189,8 @@ class TradeManager:
         ]
 
         for order in list(sortedDict.values())[::-1]:
-            if order.direction == "buy":
-                table_data.append([order.id, order.orderId, order.price, order.contractSize, ColorText.yellow(order.status) if order.status=="pending" else order.status, ColorText.green(order.direction)])
+            if order.direction == "BUY":
+                table_data.append([order.id, order.orderId, order.price, order.contractSize, ColorText.yellow(order.status) if order.status=="PENDING_CANCEL" else order.status, ColorText.green(order.direction)])
 
         table = AsciiTable(table_data, "Current Open Buy Orders")
         print(table.table)    

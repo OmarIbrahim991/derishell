@@ -1,9 +1,9 @@
 import os
 import jsonpickle
 
-from derishell.util.Util import Util
+from binance.util.Util import Util
 
-from derishell.models.ConfigModel import ConfigModel
+from binance.models.ConfigModel import ConfigModel
 
 
 class ConfigManager:

@@ -2,18 +2,18 @@ import cmd
 import time
 import collections
 
-from derishell.util.deribit_api import RestClient
+from binance.util.binance_api import RestClient
 
-from derishell.util.Util import Util
-from derishell.managers.TradeManager import TradeManager
-from derishell.managers.ConfigManager import ConfigManager
-from derishell.managers.DatabaseManager import DatabaseManager
-from derishell.util.RepeatedTimer import RepeatedTimer
+from binance.util.Util import Util
+from binance.managers.TradeManager import TradeManager
+from binance.managers.ConfigManager import ConfigManager
+from binance.managers.DatabaseManager import DatabaseManager
+from binance.util.RepeatedTimer import RepeatedTimer
 
 
-class DeriShell(cmd.Cmd):
+class Binance(cmd.Cmd):
 
-    prompt = 'DeriShell> '
+    prompt = 'Binance> '
     file = None
     rt = None
 
@@ -110,7 +110,7 @@ class DeriShell(cmd.Cmd):
             print(data)
             time.sleep(4)
             print(self.client1.orderhistory(10))
-            print(self.client1.getopenorders(ConfigManager.get_config().tradeInsturment, data['order']['orderId']))
+            print(self.client1.getopenorders(ConfigManager.get_config().tradeInsturment, data['orderId']))
 
     def do_create_ladder(self, line):
         if self.client1 != None:
@@ -126,7 +126,7 @@ class DeriShell(cmd.Cmd):
         TradeManager.stopLossTriggered = False
         DatabaseManager.delete_all_order_models()
 
-        Util.get_logger().info("Derishell Reset")
+        Util.get_logger().info("Binance Reset")
 
     def do_cancel_orders(self, line):
         TradeManager.cancel_all_current_orders()
@@ -169,4 +169,4 @@ if __name__ == '__main__':
     Util.clear_screen()
     print(Util.banner)
     DatabaseManager.initalize()
-    DeriShell().cmdloop()
+    Binance().cmdloop()

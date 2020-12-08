@@ -1,8 +1,8 @@
 import uuid
-from derishell.models.OrderModel import OrderModel
+from binance.models.OrderModel import OrderModel
 
-from derishell.util.Util import Util
-from derishell.util.Database import internal_database
+from binance.util.Util import Util
+from binance.util.Database import internal_database
 
 class DatabaseManager:
 
@@ -21,7 +21,7 @@ class DatabaseManager:
         orderModel.orderId = orderid
         orderModel.contractSize = contractsize
         orderModel.price = price
-        orderModel.status = "pending"
+        orderModel.status = "PENDING_CANCEL"
         orderModel.direction = direction
         orderModel.iuid = str(uuid.uuid4())
         orderModel.save()
@@ -35,8 +35,8 @@ class DatabaseManager:
         orderModel.orderId = orderid
         orderModel.contractSize = contractsize
         orderModel.price = price
-        orderModel.status = "open"
-        orderModel.direction = "sell"
+        orderModel.status = "NEW"
+        orderModel.direction = "SELL"
         orderModel.iuid = str(uuid.uuid4())
         orderModel.save()
 
@@ -102,8 +102,8 @@ class DatabaseManager:
 
     @staticmethod
     def get_all_open_orders():
-        return OrderModel.select().where(OrderModel.status == 'open')
+        return OrderModel.select().where(OrderModel.status == 'NEW')
 
     @staticmethod
     def get_all_pending_orders():
-        return OrderModel.select().where((OrderModel.orderId == '') & (OrderModel.status == "pending"))
+        return OrderModel.select().where((OrderModel.orderId == '') & (OrderModel.status == "PENDING_CANCEL"))

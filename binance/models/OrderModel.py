@@ -1,6 +1,6 @@
 import datetime
 from peewee import *
-from derishell.util.Database import internal_database
+from binance.util.Database import internal_database
 
 class OrderModel(Model):
 
